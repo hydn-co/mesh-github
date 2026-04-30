@@ -1,0 +1,17 @@
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/main
+/cmd/main
+*.test
+*.out
+vendor/
+go.work
+go.work.sum
+.env
+.env.*
+!.env.default
+!.env.dev.example
+!.env.example

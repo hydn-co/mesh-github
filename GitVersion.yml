@@ -1,0 +1,8 @@
+mode: ContinuousDeployment
+increment: Inherit
+prevent-increment:
+  when-current-commit-tagged: false
+semantic-version-format: Strict
+branches:
+  main:
+    regex: ^(?<BranchName>master|main)$
