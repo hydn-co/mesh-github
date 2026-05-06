@@ -25,7 +25,7 @@ func WithManifest() *runner.Manifest {
 
 	// Entity Collectors
 	if err := manifest.RegisterFeature(
-		"github_member_entity_collector",
+		"collect_members",
 		"GitHub Member Entity Collector",
 		"Collects organization members from GitHub and emits them as account entities.",
 		true,
@@ -40,7 +40,7 @@ func WithManifest() *runner.Manifest {
 	}
 
 	if err := manifest.RegisterFeature(
-		"github_team_entity_collector",
+		"collect_teams",
 		"GitHub Team Entity Collector",
 		"Collects teams and team memberships from GitHub organizations.",
 		true,
@@ -54,24 +54,9 @@ func WithManifest() *runner.Manifest {
 		log.Fatal(err)
 	}
 
-	if err := manifest.RegisterFeature(
-		"github_repository_entity_collector",
-		"GitHub Repository Entity Collector",
-		"Collects repositories and collaborators from GitHub organizations.",
-		true,
-		runner.FeatureTypeCollector,
-		new(options.GitHubRepositoryEntityCollectorOptions),
-		(*connector.NoPayload)(nil),
-		runner.FeatureResumeBehaviorNone,
-		runner.APIKeyCredential,
-		runner.Factory(collectors.NewGitHubRepositoryEntityCollector),
-	); err != nil {
-		log.Fatal(err)
-	}
-
 	// Activity Collectors
 	if err := manifest.RegisterFeature(
-		"github_audit_log_activity_collector",
+		"collect_audit_log",
 		"GitHub Audit Log Activity Collector",
 		"Collects audit log events from GitHub organizations.",
 		true,
@@ -87,7 +72,7 @@ func WithManifest() *runner.Manifest {
 
 	// Actions
 	if err := manifest.RegisterFeature(
-		"github_add_team_member_action",
+		"add_team_member",
 		"GitHub Add Team Member Action",
 		"Adds a member to a GitHub team.",
 		false,
@@ -102,7 +87,7 @@ func WithManifest() *runner.Manifest {
 	}
 
 	if err := manifest.RegisterFeature(
-		"github_remove_team_member_action",
+		"remove_team_member",
 		"GitHub Remove Team Member Action",
 		"Removes a member from a GitHub team.",
 		false,

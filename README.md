@@ -5,16 +5,15 @@ Mesh platform connector that collects identity and access data from GitHub organ
 ## Features
 
 ### Entity Collectors
-- `github_member_entity_collector` — Collects organization members as accounts
-- `github_team_entity_collector` — Collects teams (groups) and team memberships
-- `github_repository_entity_collector` — Collects repositories (applications) and collaborators
+- `collect_members` — Collects organization members as accounts
+- `collect_teams` — Collects teams (groups) and team memberships
 
 ### Activity Collectors
-- `github_audit_log_activity_collector` — Collects organization audit log events
+- `collect_audit_log` — Collects organization audit log events
 
 ### Actions
-- `github_add_team_member_action` — Add a member to a GitHub team
-- `github_remove_team_member_action` — Remove a member from a GitHub team
+- `add_team_member` — Add a member to a GitHub team
+- `remove_team_member` — Remove a member from a GitHub team
 
 ## Development
 

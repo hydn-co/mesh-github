@@ -3,12 +3,14 @@ package actions
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/hydn-co/mesh-github/internal/api"
 	"github.com/hydn-co/mesh-github/internal/credentials"
 	"github.com/hydn-co/mesh-github/internal/options"
 	"github.com/hydn-co/mesh-github/internal/payloads"
 	"github.com/hydn-co/mesh-sdk/pkg/connector"
+	"github.com/hydn-co/mesh-sdk/pkg/connectorutil"
 	"github.com/hydn-co/mesh-sdk/pkg/runner"
 )
 
@@ -16,6 +18,7 @@ import (
 type GitHubAddTeamMemberAction struct {
 	*connector.TypedFeatureContext[*options.GitHubAddTeamMemberActionOptions, *payloads.GitHubAddTeamMemberPayload]
 	client *api.Client
+	state  connectorutil.FeatureState
 }
 
 func NewGitHubAddTeamMemberAction(
@@ -29,11 +32,11 @@ func (a *GitHubAddTeamMemberAction) Init(ctx context.Context) error {
 		return err
 	}
 
-	payload := a.GetPayload()
-	if payload == nil {
-		return fmt.Errorf("add team member payload is required")
+	if err := connectorutil.Validate(a.GetOptions(), "github add team member action options"); err != nil {
+		return err
 	}
-	if err := payload.Validate(); err != nil {
+
+	if err := connectorutil.Validate(a.GetPayload(), "github add team member payload"); err != nil {
 		return err
 	}
 
@@ -44,11 +47,20 @@ func (a *GitHubAddTeamMemberAction) Init(ctx context.Context) error {
 
 	opts := a.GetOptions()
 	a.client = api.NewClient(token, opts.Organization)
+	a.state.MarkReady()
 	return nil
 }
 
 func (a *GitHubAddTeamMemberAction) Start(ctx context.Context) error {
-	logAction(ctx, "github_add_team_member_action")
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if err := a.state.RequireReady(); err != nil {
+		return err
+	}
+
+	connectorutil.LogFeature(ctx, a.TypedFeatureContext, slog.LevelInfo, "Starting GitHub add team member action")
 
 	payload := a.GetPayload()
 	role := payload.Role
@@ -63,4 +75,12 @@ func (a *GitHubAddTeamMemberAction) Start(ctx context.Context) error {
 	return nil
 }
 
-func (a *GitHubAddTeamMemberAction) Stop(_ context.Context) error { return nil }
+func (a *GitHubAddTeamMemberAction) Stop(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	a.state.Reset()
+	a.client = nil
+	return nil
+}

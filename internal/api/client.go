@@ -7,12 +7,15 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
 const (
 	baseURL          = "https://api.github.com"
+	apiVersion       = "2026-03-10"
 	maxRateLimitWait = 60 * time.Second
 	maxRetries       = 3
 	defaultPerPage   = 100
@@ -59,34 +62,6 @@ type Team struct {
 type TeamMember struct {
 	Login string `json:"login"`
 	ID    int64  `json:"id"`
-	Role  string `json:"role"`
-}
-
-// Repository represents a GitHub repository.
-type Repository struct {
-	ID          int64  `json:"id"`
-	Name        string `json:"name"`
-	FullName    string `json:"full_name"`
-	Description string `json:"description"`
-	Private     bool   `json:"private"`
-	Archived    bool   `json:"archived"`
-}
-
-// Collaborator represents a repository collaborator.
-type Collaborator struct {
-	Login       string      `json:"login"`
-	ID          int64       `json:"id"`
-	Permissions Permissions `json:"permissions"`
-	RoleName    string      `json:"role_name"`
-}
-
-// Permissions represents the permission set for a collaborator.
-type Permissions struct {
-	Admin    bool `json:"admin"`
-	Maintain bool `json:"maintain"`
-	Push     bool `json:"push"`
-	Triage   bool `json:"triage"`
-	Pull     bool `json:"pull"`
 }
 
 // AuditLogEntry represents a GitHub audit log entry.
@@ -152,6 +127,18 @@ func (c *Client) GetOrgMembership(ctx context.Context, username string) (string,
 	}
 	if err := c.get(ctx, url, &result); err != nil {
 		return "", fmt.Errorf("get org membership for %s: %w", username, err)
+	}
+	return result.Role, nil
+}
+
+// GetTeamMembershipRole retrieves the membership role for a user in a team.
+func (c *Client) GetTeamMembershipRole(ctx context.Context, teamSlug, username string) (string, error) {
+	url := fmt.Sprintf("%s/orgs/%s/teams/%s/memberships/%s", baseURL, c.org, teamSlug, username)
+	var result struct {
+		Role string `json:"role"`
+	}
+	if err := c.get(ctx, url, &result); err != nil {
+		return "", fmt.Errorf("get team membership for %s/%s: %w", teamSlug, username, err)
 	}
 	return result.Role, nil
 }
@@ -223,67 +210,6 @@ func (c *Client) ListTeamMembers(ctx context.Context, teamSlug string) ([]TeamMe
 	return all, nil
 }
 
-// ListRepositories returns all repositories in the organization.
-func (c *Client) ListRepositories(ctx context.Context) ([]Repository, error) {
-	var all []Repository
-	page := 1
-
-	for {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		url := fmt.Sprintf("%s/orgs/%s/repos?per_page=%d&page=%d&type=all", baseURL, c.org, defaultPerPage, page)
-		var repos []Repository
-		if err := c.get(ctx, url, &repos); err != nil {
-			return nil, fmt.Errorf("list repositories page %d: %w", page, err)
-		}
-
-		if len(repos) == 0 {
-			break
-		}
-
-		all = append(all, repos...)
-		if len(repos) < defaultPerPage {
-			break
-		}
-		page++
-	}
-
-	return all, nil
-}
-
-// ListCollaborators returns all collaborators for a repository.
-func (c *Client) ListCollaborators(ctx context.Context, repoName string) ([]Collaborator, error) {
-	var all []Collaborator
-	page := 1
-
-	for {
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		url := fmt.Sprintf("%s/repos/%s/%s/collaborators?per_page=%d&page=%d&affiliation=all",
-			baseURL, c.org, repoName, defaultPerPage, page)
-		var collabs []Collaborator
-		if err := c.get(ctx, url, &collabs); err != nil {
-			return nil, fmt.Errorf("list collaborators for %s page %d: %w", repoName, page, err)
-		}
-
-		if len(collabs) == 0 {
-			break
-		}
-
-		all = append(all, collabs...)
-		if len(collabs) < defaultPerPage {
-			break
-		}
-		page++
-	}
-
-	return all, nil
-}
-
 // ListAuditLog returns audit log entries for the organization.
 func (c *Client) ListAuditLog(ctx context.Context, after string, since time.Time) ([]AuditLogEntry, error) {
 	var all []AuditLogEntry
@@ -294,16 +220,8 @@ func (c *Client) ListAuditLog(ctx context.Context, after string, since time.Time
 			return nil, err
 		}
 
-		url := fmt.Sprintf("%s/orgs/%s/audit-log?per_page=%d&include=all", baseURL, c.org, defaultPerPage)
-		if !since.IsZero() {
-			url += fmt.Sprintf("&created_at=>=%s", since.UTC().Format(time.RFC3339))
-		}
-		if cursor != "" {
-			url += fmt.Sprintf("&after=%s", cursor)
-		}
-
-		var entries []AuditLogEntry
-		if err := c.get(ctx, url, &entries); err != nil {
+		entries, nextCursor, err := c.getAuditLogPage(ctx, cursor, since)
+		if err != nil {
 			return nil, fmt.Errorf("list audit log: %w", err)
 		}
 
@@ -312,15 +230,91 @@ func (c *Client) ListAuditLog(ctx context.Context, after string, since time.Time
 		}
 
 		all = append(all, entries...)
-
-		// Use the last entry's document ID as cursor for next page
-		if len(entries) < defaultPerPage {
+		if nextCursor == "" {
 			break
 		}
-		cursor = entries[len(entries)-1].DocumentID
+		cursor = nextCursor
 	}
 
 	return all, nil
+}
+
+func (c *Client) getAuditLogPage(ctx context.Context, after string, since time.Time) ([]AuditLogEntry, string, error) {
+	endpoint, err := url.Parse(fmt.Sprintf("%s/orgs/%s/audit-log", baseURL, c.org))
+	if err != nil {
+		return nil, "", fmt.Errorf("parse audit log url: %w", err)
+	}
+
+	query := endpoint.Query()
+	query.Set("per_page", strconv.Itoa(defaultPerPage))
+	query.Set("include", "all")
+	query.Set("order", "asc")
+	if !since.IsZero() {
+		query.Set("phrase", fmt.Sprintf("created:>=%s", since.UTC().Format(time.RFC3339)))
+	}
+	if after != "" {
+		query.Set("after", after)
+	}
+	endpoint.RawQuery = query.Encode()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("create audit log request: %w", err)
+	}
+
+	c.setHeaders(req)
+
+	resp, err := c.doWithRetry(ctx, req)
+	if err != nil {
+		return nil, "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
+		return nil, "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+	}
+
+	var entries []AuditLogEntry
+	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+		return nil, "", fmt.Errorf("decode audit log response: %w", err)
+	}
+
+	return entries, cursorFromLinkHeader(resp.Header.Get("Link"), "next"), nil
+}
+
+func cursorFromLinkHeader(linkHeader, rel string) string {
+	for _, segment := range strings.Split(linkHeader, ",") {
+		parts := strings.Split(strings.TrimSpace(segment), ";")
+		if len(parts) < 2 {
+			continue
+		}
+
+		matchesRel := false
+		for _, attribute := range parts[1:] {
+			if strings.TrimSpace(attribute) == fmt.Sprintf("rel=%q", rel) {
+				matchesRel = true
+				break
+			}
+		}
+		if !matchesRel {
+			continue
+		}
+
+		parsedURL, err := url.Parse(strings.Trim(parts[0], "<> "))
+		if err != nil {
+			continue
+		}
+
+		if cursor := parsedURL.Query().Get("after"); cursor != "" {
+			return cursor
+		}
+		if cursor := parsedURL.Query().Get("before"); cursor != "" {
+			return cursor
+		}
+	}
+
+	return ""
 }
 
 // AddTeamMember adds a user to a team.
@@ -400,7 +394,7 @@ func (c *Client) get(ctx context.Context, url string, result any) error {
 func (c *Client) setHeaders(req *http.Request) {
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("X-GitHub-Api-Version", apiVersion)
 }
 
 func (c *Client) doWithRetry(ctx context.Context, req *http.Request) (*http.Response, error) {

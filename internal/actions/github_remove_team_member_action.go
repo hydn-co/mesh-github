@@ -3,12 +3,14 @@ package actions
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/hydn-co/mesh-github/internal/api"
 	"github.com/hydn-co/mesh-github/internal/credentials"
 	"github.com/hydn-co/mesh-github/internal/options"
 	"github.com/hydn-co/mesh-github/internal/payloads"
 	"github.com/hydn-co/mesh-sdk/pkg/connector"
+	"github.com/hydn-co/mesh-sdk/pkg/connectorutil"
 	"github.com/hydn-co/mesh-sdk/pkg/runner"
 )
 
@@ -16,6 +18,7 @@ import (
 type GitHubRemoveTeamMemberAction struct {
 	*connector.TypedFeatureContext[*options.GitHubRemoveTeamMemberActionOptions, *payloads.GitHubRemoveTeamMemberPayload]
 	client *api.Client
+	state  connectorutil.FeatureState
 }
 
 func NewGitHubRemoveTeamMemberAction(
@@ -29,11 +32,11 @@ func (a *GitHubRemoveTeamMemberAction) Init(ctx context.Context) error {
 		return err
 	}
 
-	payload := a.GetPayload()
-	if payload == nil {
-		return fmt.Errorf("remove team member payload is required")
+	if err := connectorutil.Validate(a.GetOptions(), "github remove team member action options"); err != nil {
+		return err
 	}
-	if err := payload.Validate(); err != nil {
+
+	if err := connectorutil.Validate(a.GetPayload(), "github remove team member payload"); err != nil {
 		return err
 	}
 
@@ -44,11 +47,20 @@ func (a *GitHubRemoveTeamMemberAction) Init(ctx context.Context) error {
 
 	opts := a.GetOptions()
 	a.client = api.NewClient(token, opts.Organization)
+	a.state.MarkReady()
 	return nil
 }
 
 func (a *GitHubRemoveTeamMemberAction) Start(ctx context.Context) error {
-	logAction(ctx, "github_remove_team_member_action")
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if err := a.state.RequireReady(); err != nil {
+		return err
+	}
+
+	connectorutil.LogFeature(ctx, a.TypedFeatureContext, slog.LevelInfo, "Starting GitHub remove team member action")
 
 	payload := a.GetPayload()
 	if err := a.client.RemoveTeamMember(ctx, payload.TeamSlug, payload.Username); err != nil {
@@ -58,4 +70,12 @@ func (a *GitHubRemoveTeamMemberAction) Start(ctx context.Context) error {
 	return nil
 }
 
-func (a *GitHubRemoveTeamMemberAction) Stop(_ context.Context) error { return nil }
+func (a *GitHubRemoveTeamMemberAction) Stop(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	a.state.Reset()
+	a.client = nil
+	return nil
+}

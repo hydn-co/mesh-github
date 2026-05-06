@@ -3,15 +3,18 @@ package collectors
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
+	"github.com/fgrzl/enumerators"
 	"github.com/hydn-co/mesh-github/internal/api"
 	"github.com/hydn-co/mesh-github/internal/credentials"
 	"github.com/hydn-co/mesh-github/internal/options"
 	"github.com/hydn-co/mesh-sdk/pkg/catalog/events"
 	"github.com/hydn-co/mesh-sdk/pkg/catalog/types"
 	"github.com/hydn-co/mesh-sdk/pkg/connector"
+	"github.com/hydn-co/mesh-sdk/pkg/connectorutil"
 	"github.com/hydn-co/mesh-sdk/pkg/runner"
 )
 
@@ -19,6 +22,7 @@ import (
 type GitHubAuditLogActivityCollector struct {
 	*connector.TypedFeatureContext[*options.GitHubAuditLogActivityCollectorOptions, *connector.NoPayload]
 	client *api.Client
+	state  connectorutil.FeatureState
 }
 
 func NewGitHubAuditLogActivityCollector(
@@ -32,6 +36,10 @@ func (c *GitHubAuditLogActivityCollector) Init(ctx context.Context) error {
 		return err
 	}
 
+	if err := connectorutil.Validate(c.GetOptions(), "github audit log activity collector options"); err != nil {
+		return err
+	}
+
 	token, err := credentials.ExtractToken(c.GetCredentials())
 	if err != nil {
 		return fmt.Errorf("failed to extract token: %w", err)
@@ -39,11 +47,20 @@ func (c *GitHubAuditLogActivityCollector) Init(ctx context.Context) error {
 
 	opts := c.GetOptions()
 	c.client = api.NewClient(token, opts.Organization)
+	c.state.MarkReady()
 	return nil
 }
 
 func (c *GitHubAuditLogActivityCollector) Start(ctx context.Context) error {
-	logCollector(ctx, "github_audit_log_activity_collector")
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	if err := c.state.RequireReady(); err != nil {
+		return err
+	}
+
+	connectorutil.LogFeature(ctx, c.TypedFeatureContext, slog.LevelInfo, "Starting GitHub audit log activity collector")
 
 	// Extract resume cursor from payload
 	var since time.Time
@@ -62,30 +79,37 @@ func (c *GitHubAuditLogActivityCollector) Start(ctx context.Context) error {
 		}
 	}
 
-	entries, err := c.client.ListAuditLog(ctx, "", since)
-	if err != nil {
-		return fmt.Errorf("failed to list audit log: %w", err)
-	}
-
-	for _, entry := range entries {
+	if err := enumerators.ForEach(c.client.AuditLogEnumerator(ctx, "", since), func(entry api.AuditLogEntry) error {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
 
 		event := mapAuditLogEntry(entry)
 		if event == nil {
-			continue
+			return nil
 		}
 
 		if err := c.Emit(ctx, event); err != nil {
 			return fmt.Errorf("failed to emit audit event %s: %w", entry.DocumentID, err)
 		}
+
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to enumerate audit log: %w", err)
 	}
 
 	return nil
 }
 
-func (c *GitHubAuditLogActivityCollector) Stop(_ context.Context) error { return nil }
+func (c *GitHubAuditLogActivityCollector) Stop(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	c.state.Reset()
+	c.client = nil
+	return nil
+}
 
 func mapAuditLogEntry(entry api.AuditLogEntry) any {
 	ts := time.UnixMilli(entry.Timestamp).UTC()

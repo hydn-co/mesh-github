@@ -3,31 +3,35 @@ package credentials
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/hydn-co/mesh-sdk/pkg/connectorutil"
 )
 
 type tokenCredentials struct {
-	Token  string `json:"token"`
-	APIKey string `json:"api_key"`
+	Token string `json:"token"`
 }
 
-// ExtractToken returns the GitHub personal access token from known credential fields.
+// ExtractToken returns the GitHub personal access token from the standard api_key envelope,
+// while keeping a legacy token fallback for existing stored credentials.
 func ExtractToken(raw json.RawMessage) (string, error) {
+	token, err := connectorutil.ExtractAPIKey(raw)
+	if err == nil {
+		return token, nil
+	}
+
 	if len(raw) == 0 {
-		return "", fmt.Errorf("no credentials provided")
+		return "", err
 	}
 
-	var creds tokenCredentials
-	if err := json.Unmarshal(raw, &creds); err != nil {
-		return "", fmt.Errorf("invalid credentials JSON format: %w", err)
+	var legacy tokenCredentials
+	if decodeErr := json.Unmarshal(raw, &legacy); decodeErr != nil {
+		return "", err
 	}
 
-	if creds.Token != "" {
-		return creds.Token, nil
+	legacyToken, normalizeErr := connectorutil.NormalizeToken(legacy.Token)
+	if normalizeErr == nil {
+		return legacyToken, nil
 	}
 
-	if creds.APIKey != "" {
-		return creds.APIKey, nil
-	}
-
-	return "", fmt.Errorf("missing token credential field (expected token or api_key)")
+	return "", fmt.Errorf("extract token: %w", err)
 }
