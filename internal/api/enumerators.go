@@ -113,7 +113,6 @@ func (c *Client) AuditLogEnumerator(
 		if err != nil {
 			return nil, "", fmt.Errorf("list audit log: %w", err)
 		}
-
 		return entries, nextCursor, nil
 	})
 }

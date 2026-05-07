@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -77,6 +78,40 @@ type AuditLogEntry struct {
 	Team       string         `json:"team"`
 	Repo       string         `json:"repo"`
 	Data       map[string]any `json:"data"`
+}
+
+// HTTPStatusError captures non-2xx responses from the GitHub REST API.
+type HTTPStatusError struct {
+	StatusCode int
+	Body       string
+}
+
+func (e *HTTPStatusError) Error() string {
+	if e == nil {
+		return "HTTP error"
+	}
+
+	if e.Body == "" {
+		return fmt.Sprintf("HTTP %d", e.StatusCode)
+	}
+
+	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Body)
+}
+
+func newHTTPStatusError(statusCode int, body []byte) error {
+	return &HTTPStatusError{
+		StatusCode: statusCode,
+		Body:       strings.TrimSpace(string(body)),
+	}
+}
+
+func IsAuditLogUnavailable(err error) bool {
+	var statusErr *HTTPStatusError
+	if !errors.As(err, &statusErr) {
+		return false
+	}
+
+	return statusErr.StatusCode == http.StatusNotFound
 }
 
 // ListOrgMembers returns all members of the organization.
@@ -272,7 +307,7 @@ func (c *Client) getAuditLogPage(ctx context.Context, after string, since time.T
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return nil, "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+		return nil, "", newHTTPStatusError(resp.StatusCode, body)
 	}
 
 	var entries []AuditLogEntry
@@ -385,7 +420,7 @@ func (c *Client) get(ctx context.Context, url string, result any) error {
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
-		return fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(body))
+		return newHTTPStatusError(resp.StatusCode, body)
 	}
 
 	return json.NewDecoder(resp.Body).Decode(result)

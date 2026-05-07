@@ -18,6 +18,8 @@ import (
 	"github.com/hydn-co/mesh-sdk/pkg/runner"
 )
 
+const auditLogUnavailableHint = "GitHub returns 404 when the organization audit log is unavailable for the org plan or the token lacks organization-owner/read:audit_log access"
+
 // GitHubAuditLogActivityCollector collects audit log events from GitHub.
 type GitHubAuditLogActivityCollector struct {
 	*connector.TypedFeatureContext[*options.GitHubAuditLogActivityCollectorOptions, *connector.NoPayload]
@@ -95,6 +97,17 @@ func (c *GitHubAuditLogActivityCollector) Start(ctx context.Context) error {
 
 		return nil
 	}); err != nil {
+		if api.IsAuditLogUnavailable(err) {
+			slog.WarnContext(
+				ctx,
+				"GitHub audit log endpoint unavailable; skipping collector",
+				"organization", c.GetOptions().Organization,
+				"error", err,
+				"hint", auditLogUnavailableHint,
+			)
+			return newAuditLogUnavailableError(err)
+		}
+
 		return fmt.Errorf("failed to enumerate audit log: %w", err)
 	}
 
@@ -109,6 +122,10 @@ func (c *GitHubAuditLogActivityCollector) Stop(ctx context.Context) error {
 	c.state.Reset()
 	c.client = nil
 	return nil
+}
+
+func newAuditLogUnavailableError(err error) error {
+	return fmt.Errorf("failed to enumerate audit log: %w; hint: %s", err, auditLogUnavailableHint)
 }
 
 func mapAuditLogEntry(entry api.AuditLogEntry) any {
