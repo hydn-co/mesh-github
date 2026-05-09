@@ -7,7 +7,7 @@ import (
 )
 
 type GitHubRemoveTeamMemberPayload struct {
-	TeamSlug string `json:"team_slug" binding:"required"`
+	TeamSlug string `json:"team_slug" binding:"required" x-lookup:"{\"entity-type\": \"groups\", \"display-key\": \"name\", \"submit-key\": \"group_ref\", \"form-input-type\": \"select\" }"`
 	Username string `json:"username"  binding:"required"`
 }
 

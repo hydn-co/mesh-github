@@ -9,6 +9,7 @@ import (
 	"github.com/hydn-co/mesh-github/internal/api"
 	"github.com/hydn-co/mesh-github/internal/credentials"
 	"github.com/hydn-co/mesh-github/internal/options"
+	githubroles "github.com/hydn-co/mesh-github/internal/roles"
 	"github.com/hydn-co/mesh-sdk/pkg/catalog/entities"
 	"github.com/hydn-co/mesh-sdk/pkg/connector"
 	"github.com/hydn-co/mesh-sdk/pkg/connectorutil"
@@ -58,6 +59,23 @@ func (c *GitHubTeamEntityCollector) Start(ctx context.Context) error {
 	}
 
 	connectorutil.LogFeature(ctx, c.TypedFeatureContext, slog.LevelInfo, "Starting GitHub team entity collector")
+
+	if err := enumerators.ForEach(
+		enumerators.Slice(githubroles.TeamMembershipCatalogRoles()),
+		func(role *entities.Role) error {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
+
+			if err := c.Emit(ctx, role); err != nil {
+				return fmt.Errorf("failed to emit role %s: %w", role.RoleRef, err)
+			}
+
+			return nil
+		},
+	); err != nil {
+		return fmt.Errorf("failed to emit GitHub team roles: %w", err)
+	}
 
 	if err := enumerators.ForEach(c.client.TeamEnumerator(ctx), func(team api.Team) error {
 		if err := ctx.Err(); err != nil {

@@ -15,3 +15,4 @@ go.work.sum
 !.env.default
 !.env.dev.example
 !.env.example
+manifest.json

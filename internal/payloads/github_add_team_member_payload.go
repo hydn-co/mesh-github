@@ -2,14 +2,16 @@ package payloads
 
 import (
 	"fmt"
+	"strings"
 
+	githubroles "github.com/hydn-co/mesh-github/internal/roles"
 	"github.com/hydn-co/mesh-sdk/pkg/connectorutil"
 )
 
 type GitHubAddTeamMemberPayload struct {
-	TeamSlug string `json:"team_slug"      binding:"required"`
+	TeamSlug string `json:"team_slug"      binding:"required" x-lookup:"{\"entity-type\": \"groups\", \"display-key\": \"name\", \"submit-key\": \"group_ref\", \"form-input-type\": \"select\" }"`
 	Username string `json:"username"       binding:"required"`
-	Role     string `json:"role,omitempty"`
+	Role     string `json:"role,omitempty"                    x-lookup:"{\"entity-type\": \"roles\", \"display-key\": \"name\", \"submit-key\": \"role_ref\", \"form-input-type\": \"select\" }"   title:"Role" description:"GitHub team role to assign"`
 }
 
 func (p *GitHubAddTeamMemberPayload) GetDiscriminator() string {
@@ -29,9 +31,26 @@ func (p *GitHubAddTeamMemberPayload) Validate() error {
 		return err
 	}
 
-	if p.Role != "" && p.Role != "member" && p.Role != "maintainer" {
-		return fmt.Errorf("role must be 'member' or 'maintainer'")
+	if p.Role != "" && !githubroles.IsTeamMembershipRole(p.Role) {
+		return fmt.Errorf("role must be one of %s", quoteAndJoin(githubroles.TeamMembershipRoleRefs()))
 	}
 
 	return nil
+}
+
+func quoteAndJoin(values []string) string {
+	quoted := make([]string, 0, len(values))
+	for _, value := range values {
+		quoted = append(quoted, fmt.Sprintf("'%s'", value))
+	}
+
+	if len(quoted) == 0 {
+		return ""
+	}
+
+	if len(quoted) == 1 {
+		return quoted[0]
+	}
+
+	return strings.Join(quoted[:len(quoted)-1], ", ") + " or " + quoted[len(quoted)-1]
 }
