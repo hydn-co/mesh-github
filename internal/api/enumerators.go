@@ -98,6 +98,47 @@ func (c *Client) TeamMemberEnumerator(ctx context.Context, teamSlug string) enum
 	})
 }
 
+func (c *Client) RepositoryEnumerator(ctx context.Context) enumerators.Enumerator[Repository] {
+	return pagedEnumerator(ctx, func(page int) ([]Repository, error) {
+		url := fmt.Sprintf(
+			"%s/orgs/%s/repos?type=all&per_page=%d&page=%d",
+			baseURL,
+			c.org,
+			defaultPerPage,
+			page,
+		)
+		var repositories []Repository
+		if err := c.get(ctx, url, &repositories); err != nil {
+			return nil, fmt.Errorf("list org repositories page %d: %w", page, err)
+		}
+
+		return repositories, nil
+	})
+}
+
+func (c *Client) RepositoryCollaboratorEnumerator(
+	ctx context.Context,
+	owner string,
+	repo string,
+) enumerators.Enumerator[RepositoryCollaborator] {
+	return pagedEnumerator(ctx, func(page int) ([]RepositoryCollaborator, error) {
+		url := fmt.Sprintf(
+			"%s/repos/%s/%s/collaborators?affiliation=all&per_page=%d&page=%d",
+			baseURL,
+			owner,
+			repo,
+			defaultPerPage,
+			page,
+		)
+		var collaborators []RepositoryCollaborator
+		if err := c.get(ctx, url, &collaborators); err != nil {
+			return nil, fmt.Errorf("list repository collaborators for %s/%s page %d: %w", owner, repo, page, err)
+		}
+
+		return collaborators, nil
+	})
+}
+
 func (c *Client) AuditLogEnumerator(
 	ctx context.Context,
 	after string,

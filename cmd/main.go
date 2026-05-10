@@ -38,6 +38,19 @@ func WithManifest() *runner.Manifest {
 	)
 
 	manifest.MustRegisterFeature(
+		"collect_repositories",
+		"GitHub Repository Entity Collector",
+		"Collects repositories from GitHub organizations and emits application entities with repository-account relationships.",
+		runner.FeatureSchedulable,
+		runner.FeatureTypeCollector,
+		new(options.GitHubRepositoryEntityCollectorOptions),
+		(*connector.NoPayload)(nil),
+		runner.FeatureResumeBehaviorNone,
+		runner.APIKeyCredential,
+		runner.Factory(collectors.NewGitHubRepositoryEntityCollector),
+	)
+
+	manifest.MustRegisterFeature(
 		"collect_teams",
 		"GitHub Team Entity Collector",
 		"Collects teams and team memberships from GitHub organizations.",

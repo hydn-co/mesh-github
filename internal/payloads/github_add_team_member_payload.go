@@ -9,9 +9,9 @@ import (
 )
 
 type GitHubAddTeamMemberPayload struct {
-	TeamSlug string `json:"team_slug"      binding:"required" x-lookup:"{\"entity-type\": \"groups\", \"display-key\": \"name\", \"submit-key\": \"group_ref\", \"form-input-type\": \"select\" }"`
-	Username string `json:"username"       binding:"required"`
-	Role     string `json:"role,omitempty"                    x-lookup:"{\"entity-type\": \"roles\", \"display-key\": \"name\", \"submit-key\": \"role_ref\", \"form-input-type\": \"select\" }"   title:"Role" description:"GitHub team role to assign"`
+	TeamSlug string `json:"team_slug"      binding:"required" title:"Team"     description:"GitHub team to add the member to"      x-lookup:"{\"entity-type\": \"groups\", \"display-key\": \"name\", \"submit-key\": \"group_ref\", \"form-input-type\": \"select\" }"`
+	Username string `json:"username"       binding:"required" title:"Username" description:"GitHub username of the member to add"`
+	Role     string `json:"role,omitempty"                    title:"Role"     description:"GitHub team membership role to assign" x-lookup:"{\"entity-type\": \"roles\", \"display-key\": \"name\", \"submit-key\": \"role_ref\", \"form-input-type\": \"select\" }"`
 }
 
 func (p *GitHubAddTeamMemberPayload) GetDiscriminator() string {

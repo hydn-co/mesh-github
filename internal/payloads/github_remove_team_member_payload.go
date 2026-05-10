@@ -7,8 +7,8 @@ import (
 )
 
 type GitHubRemoveTeamMemberPayload struct {
-	TeamSlug string `json:"team_slug" binding:"required" x-lookup:"{\"entity-type\": \"groups\", \"display-key\": \"name\", \"submit-key\": \"group_ref\", \"form-input-type\": \"select\" }"`
-	Username string `json:"username"  binding:"required"`
+	TeamSlug string `json:"team_slug" binding:"required" title:"Team"     description:"GitHub team to remove the member from"   x-lookup:"{\"entity-type\": \"groups\", \"display-key\": \"name\", \"submit-key\": \"group_ref\", \"form-input-type\": \"select\" }"`
+	Username string `json:"username"  binding:"required" title:"Username" description:"GitHub username of the member to remove"`
 }
 
 func (p *GitHubRemoveTeamMemberPayload) GetDiscriminator() string {

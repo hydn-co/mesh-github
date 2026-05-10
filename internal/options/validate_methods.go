@@ -8,6 +8,14 @@ func (o *GitHubMemberEntityCollectorOptions) Validate() error {
 	return validateGitHubOptionsCore(&o.GitHubOptionsCore)
 }
 
+func (o *GitHubRepositoryEntityCollectorOptions) Validate() error {
+	if o == nil {
+		return validateGitHubOptionsCore(nil)
+	}
+
+	return validateGitHubOptionsCore(&o.GitHubOptionsCore)
+}
+
 func (o *GitHubTeamEntityCollectorOptions) Validate() error {
 	if o == nil {
 		return validateGitHubOptionsCore(nil)

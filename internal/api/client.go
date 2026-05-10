@@ -65,6 +65,22 @@ type TeamMember struct {
 	ID    int64  `json:"id"`
 }
 
+// Repository represents a GitHub repository.
+type Repository struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	FullName    string `json:"full_name"`
+	Description string `json:"description"`
+}
+
+// RepositoryCollaborator represents a collaborator with access to a repository.
+type RepositoryCollaborator struct {
+	Login    string `json:"login"`
+	ID       int64  `json:"id"`
+	Type     string `json:"type"`
+	RoleName string `json:"role_name"`
+}
+
 // AuditLogEntry represents a GitHub audit log entry.
 type AuditLogEntry struct {
 	Timestamp  int64          `json:"@timestamp"`
@@ -237,6 +253,82 @@ func (c *Client) ListTeamMembers(ctx context.Context, teamSlug string) ([]TeamMe
 
 		all = append(all, members...)
 		if len(members) < defaultPerPage {
+			break
+		}
+		page++
+	}
+
+	return all, nil
+}
+
+// ListOrgRepositories returns all repositories in the organization.
+func (c *Client) ListOrgRepositories(ctx context.Context) ([]Repository, error) {
+	var all []Repository
+	page := 1
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		url := fmt.Sprintf(
+			"%s/orgs/%s/repos?type=all&per_page=%d&page=%d",
+			baseURL,
+			c.org,
+			defaultPerPage,
+			page,
+		)
+		var repositories []Repository
+		if err := c.get(ctx, url, &repositories); err != nil {
+			return nil, fmt.Errorf("list org repositories page %d: %w", page, err)
+		}
+
+		if len(repositories) == 0 {
+			break
+		}
+
+		all = append(all, repositories...)
+		if len(repositories) < defaultPerPage {
+			break
+		}
+		page++
+	}
+
+	return all, nil
+}
+
+// ListRepositoryCollaborators returns all collaborators for a repository.
+func (c *Client) ListRepositoryCollaborators(
+	ctx context.Context,
+	owner, repo string,
+) ([]RepositoryCollaborator, error) {
+	var all []RepositoryCollaborator
+	page := 1
+
+	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+
+		url := fmt.Sprintf(
+			"%s/repos/%s/%s/collaborators?affiliation=all&per_page=%d&page=%d",
+			baseURL,
+			owner,
+			repo,
+			defaultPerPage,
+			page,
+		)
+		var collaborators []RepositoryCollaborator
+		if err := c.get(ctx, url, &collaborators); err != nil {
+			return nil, fmt.Errorf("list repository collaborators for %s/%s page %d: %w", owner, repo, page, err)
+		}
+
+		if len(collaborators) == 0 {
+			break
+		}
+
+		all = append(all, collaborators...)
+		if len(collaborators) < defaultPerPage {
 			break
 		}
 		page++
