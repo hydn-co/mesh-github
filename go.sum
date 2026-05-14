@@ -2,8 +2,8 @@ github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UF
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/fgrzl/enumerators v1.0.0 h1:gpdX86ZaK95EogTICr/3lFrC57BdMeKjd1wnmM1NSNQ=
-github.com/fgrzl/enumerators v1.0.0/go.mod h1:feeP9+rknaUYQ8TQwycW1lLX9JdOrWRgr22pu1j5lP4=
+github.com/fgrzl/enumerators v1.0.1 h1:wdpTvSkE/p7d3KDyb/SwNZq0m4lDL1uMD8krm+89MHQ=
+github.com/fgrzl/enumerators v1.0.1/go.mod h1:dQ9CmYdpN4NYvjUKRRgb0aJwTbFxkx3zsEH54iQG/Sw=
 github.com/fgrzl/es v1.0.0 h1:kS6cHOPeKc8DVhNiPDjIIBLyG0IRpvnBSE/8mrkHle4=
 github.com/fgrzl/es v1.0.0/go.mod h1:EYKVXSMTeFzRoN2cyhC/QbE3rFwW5r1NfL6IKCaW/F8=
 github.com/fgrzl/json v1.0.0 h1:ZCTSbZq3077eP/grt+H71TFoI/Ac8TMSgo0nI/gXNFE=
@@ -43,8 +43,6 @@ go.opentelemetry.io/otel/sdk v1.43.0 h1:pi5mE86i5rTeLXqoF/hhiBtUNcrAGHLKQdhg4h4V
 go.opentelemetry.io/otel/sdk v1.43.0/go.mod h1:P+IkVU3iWukmiit/Yf9AWvpyRDlUeBaRg6Y+C58QHzg=
 go.opentelemetry.io/otel/trace v1.43.0 h1:BkNrHpup+4k4w+ZZ86CZoHHEkohws8AY+WTX09nk+3A=
 go.opentelemetry.io/otel/trace v1.43.0/go.mod h1:/QJhyVBUUswCphDVxq+8mld+AvhXZLhe+8WVFxiFff0=
-golang.org/x/exp v0.0.0-20260112195511-716be5621a96 h1:Z/6YuSHTLOHfNFdb8zVZomZr7cqNgTJvA8+Qz75D8gU=
-golang.org/x/exp v0.0.0-20260112195511-716be5621a96/go.mod h1:nzimsREAkjBCIEFtHiYkrJyT+2uy9YZJB7H1k68CXZU=
 golang.org/x/sys v0.43.0 h1:Rlag2XtaFTxp19wS8MXlJwTvoh8ArU6ezoyFsMyCTNI=
 golang.org/x/sys v0.43.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
