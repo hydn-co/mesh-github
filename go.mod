@@ -3,7 +3,7 @@ module github.com/hydn-co/mesh-github
 go 1.25.6
 
 require (
-	github.com/fgrzl/enumerators v1.0.0
+	github.com/fgrzl/enumerators v1.0.1
 	github.com/fgrzl/json v1.0.0
 	github.com/hydn-co/mesh-sdk v0.2.55
 )
@@ -23,6 +23,5 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/metric v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
