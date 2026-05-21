@@ -6,8 +6,8 @@ github.com/fgrzl/enumerators v1.0.0 h1:gpdX86ZaK95EogTICr/3lFrC57BdMeKjd1wnmM1NS
 github.com/fgrzl/enumerators v1.0.0/go.mod h1:feeP9+rknaUYQ8TQwycW1lLX9JdOrWRgr22pu1j5lP4=
 github.com/fgrzl/es v1.0.0 h1:kS6cHOPeKc8DVhNiPDjIIBLyG0IRpvnBSE/8mrkHle4=
 github.com/fgrzl/es v1.0.0/go.mod h1:EYKVXSMTeFzRoN2cyhC/QbE3rFwW5r1NfL6IKCaW/F8=
-github.com/fgrzl/json v1.0.0 h1:ZCTSbZq3077eP/grt+H71TFoI/Ac8TMSgo0nI/gXNFE=
-github.com/fgrzl/json v1.0.0/go.mod h1:8ZdkBL2YZJ2w96e9GHs70TG7omuJLPVclgj/uQSTgq8=
+github.com/fgrzl/json v1.0.1 h1:VioeCGiORopB6RucA7Ir7amXa5Urwf5yijdDiTtu8ZU=
+github.com/fgrzl/json v1.0.1/go.mod h1:IqXPQpVxXnceeaXiHaFHWlxuCeRbvWEzkf6YZAtnY1U=
 github.com/fgrzl/timestamp v1.0.0 h1:iQZu9+elD+/Zfu0z5wuinQMsxWMmRnhWRhp+s25v8CQ=
 github.com/fgrzl/timestamp v1.0.0/go.mod h1:0n1Kx9fdOog6ESB44hdTz230BORIAtWgiKjFtNbCFM8=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
